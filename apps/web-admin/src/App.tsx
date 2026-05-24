@@ -1,11 +1,21 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
 
+type HealthStatus = { status: string; timestamp: string } | null
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [health, setHealth] = useState<HealthStatus>(null)
+  const [healthError, setHealthError] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/v1/health')
+      .then((res) => res.json())
+      .then(setHealth)
+      .catch(() => setHealthError(true))
+  }, [])
 
   return (
     <>
@@ -21,13 +31,15 @@ function App() {
             Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-         the Count is {count}
-        </button>
+        <div style={{ marginTop: '1rem', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+          {healthError && <span style={{ color: '#f87171' }}>API unreachable</span>}
+          {!healthError && !health && <span style={{ color: '#94a3b8' }}>Checking API...</span>}
+          {health && (
+            <span style={{ color: '#4ade80' }}>
+              API {health.status} &mdash; {new Date(health.timestamp).toLocaleTimeString()}
+            </span>
+          )}
+        </div>
       </section>
 
       <div className="ticks"></div>
