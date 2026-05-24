@@ -95,6 +95,26 @@ Cart → Invoice → Payment
 
 ---
 
+## Employee Self-Reporting Flow
+
+When a corporate client creates a verification, they choose one of two data collection options:
+
+- **Fill themselves** — the client user enters the employee's details directly on the corporate portal.
+- **Send to employee** — the client sends an OTP-authenticated link to the employee to fill in their own details.
+
+Regardless of which option is chosen, the client user always retains the ability to fill or edit the data themselves at any point.
+
+### Employee Link Flow
+1. The employee receives an email with a unique verification link pointing to the **employee portal** (`web-employee`) — a separate lightweight app.
+2. The employee portal loads only OTP verification and task forms — no corporate portal features or assets are included.
+3. Upon successful OTP verification, the employee sees only the tasks assigned to them (employment history, education records, address details).
+4. The employee fills in and submits their details.
+5. The submission is returned to the **corporate client user** (not Tasdeeq admin) for review on the corporate portal.
+6. The client user verifies the employee-submitted details, makes any corrections if needed, and adds the verification to the cart.
+7. From the cart, the standard payment and admin review flow proceeds as normal.
+
+---
+
 ## Unregistered Verifying Institution Flow
 
 When a previous employer or education institute is not yet a Tasdeeq client:
@@ -138,6 +158,67 @@ When a previous employer or education institute is not yet a Tasdeeq client:
 - Geo-tagged photo and evidence capture
 - Field remarks and proof submission
 - Task acceptance/status updates
+
+---
+
+## Tech Stack
+
+### Monorepo Structure (Turborepo)
+
+```
+apps/
+  web-admin/        # React + Vite — Tasdeeq internal dashboard
+  web-corporate/    # React + Vite — Corporate client portal
+  web-employee/     # React + Vite — Lightweight employee self-reporting portal (OTP-gated, task forms only)
+  mobile-consumer/  # React Native (Expo) — Consumer app
+  mobile-agent/     # React Native (Expo) — Field agent app
+packages/
+  shared-types/     # TypeScript interfaces shared across all apps
+  api-client/       # Shared API calls and hooks
+  ui-web/           # Shared web components (admin + corporate portals)
+  ui-mobile/        # Shared React Native components (consumer + agent apps)
+  verification/     # Shared verification logic, forms, validation
+```
+
+The consumer mobile app and corporate portal share significant verification functionality (form logic, document upload, status tracking, cart), which is the primary justification for the monorepo approach.
+
+### Backend Architecture: Modular Monolith
+
+The backend is structured as a **modular monolith** — a single deployable NestJS application composed of fully isolated domain modules. Each module:
+- Owns its own data and does not share database tables with other modules
+- Communicates with other modules via well-defined interfaces (events or command bus), not direct service imports across module boundaries
+- Can be extracted into an independent microservice by swapping the internal event bus with a network transport (RabbitMQ, Kafka, gRPC) with minimal code changes
+
+Planned domain modules: `auth`, `users`, `verification`, `payments`, `notifications`, `field-agents`, `documents`, `reports`, `workflow`
+
+### Containerization
+
+Every app and service is Dockerized from the start. Each app (`web-admin`, `web-corporate`, `api`) has its own `Dockerfile`. A single `docker-compose.yml` at the monorepo root brings up the entire stack for local development:
+
+- NestJS API
+- React + Vite web portals (admin, corporate)
+- PostgreSQL (with PostGIS)
+- Redis
+- Any external service stubs or local equivalents (e.g. S3-compatible storage via MinIO)
+
+This ensures the full project runs with a single `docker compose up` from the root with no manual environment setup.
+
+### Stack Decisions
+
+| Layer | Choice | Reason |
+|---|---|---|
+| Runtime & Package Manager | Bun | Faster installs, built-in TypeScript, replaces Node.js/npm |
+| Backend | NestJS (TypeScript, runs on Bun) | Modular monolith — each domain is an isolated NestJS module with its own boundaries, designed so any module can be extracted into an independent microservice with minimal configuration changes |
+| Web Portals | React + Vite (TypeScript) | SPA setup for admin and corporate portals; SSR not needed as all portals are behind authentication |
+| UI (Web) | Tailwind CSS + shadcn/ui | Utility-first styling with accessible, composable components |
+| Mobile | React Native + Expo | Shared verification logic and components with web portals |
+| Database | PostgreSQL + PostGIS | Relational data, audit logs, geo queries for field dispatch |
+| Cache & Queues | Redis + BullMQ | Task state transitions, geo-dispatch, notification jobs |
+| Real-time | Socket.io | Live task status updates to portals and dashboards |
+| File Storage | AWS S3 / DigitalOcean Spaces | Documents, CNIC scans, geo-tagged field photos |
+| SMS / OTP | Twilio (or Jazz Business API) | OTP authentication, workflow notifications |
+| Email | SendGrid | Workflow notifications, OTP links to institutions |
+| Payments | JazzCash / EasyPaisa merchant APIs | Primary payment methods |
 
 ---
 
