@@ -10,7 +10,7 @@
 - [ ] Scaffold all 5 apps: `web-admin`, `web-corporate`, `web-employee`, `mobile-consumer`, `mobile-agent`
 - [ ] Scaffold shared packages: `shared-types`, `api-client`, `ui-web`, `ui-mobile`, `verification`
 - [ ] Set up NestJS backend (`apps/api`) with modular folder structure
-- [ ] Configure TypeORM with PostgreSQL + PostGIS and migration pipeline
+- [ ] Configure Prisma with PostgreSQL + PostGIS (schema setup, migration pipeline, Prisma Client generation)
 - [ ] Write `Dockerfile` for each app and the API
 - [ ] Write root `docker-compose.yml` (API, PostgreSQL+PostGIS, Redis, MinIO)
 - [ ] Configure environment variables and `.env.example` for all apps

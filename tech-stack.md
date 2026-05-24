@@ -55,7 +55,8 @@ The full project runs with a single `docker compose up` from the root with no ma
 | Web Portals | React + Vite (TypeScript) | SPA; SSR not needed as all portals are behind authentication |
 | UI (Web) | Tailwind CSS + shadcn/ui | Utility-first styling with accessible, composable components |
 | Mobile | React Native + Expo | Shared verification logic and components with web portals |
-| Database | PostgreSQL + PostGIS | Relational data, audit logs, geo queries for field dispatch |
+| ORM | Prisma | Type-safe auto-generated client, clean migrations, schema as single source of truth |
+| Database | PostgreSQL + PostGIS | Relational data, audit logs, geo queries for field dispatch (PostGIS geo queries use Prisma `$queryRaw`) |
 | Cache & Queues | Redis + BullMQ | Task state transitions, geo-dispatch, notification jobs |
 | Real-time | Socket.io | Live task status updates to portals and dashboards |
 | File Storage | AWS S3 / DigitalOcean Spaces | Documents, CNIC scans, geo-tagged field photos |
