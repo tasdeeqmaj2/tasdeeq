@@ -1,0 +1,31 @@
+export enum VerificationType {
+  CRIMINAL = 'CRIMINAL',
+  EMPLOYMENT = 'EMPLOYMENT',
+  EDUCATION = 'EDUCATION',
+  ADDRESS = 'ADDRESS',
+  INSURANCE = 'INSURANCE',
+}
+
+export enum VerificationStatus {
+  DRAFT = 'DRAFT',
+  PENDING_EMPLOYEE_SUBMISSION = 'PENDING_EMPLOYEE_SUBMISSION',
+  PENDING_CLIENT_REVIEW = 'PENDING_CLIENT_REVIEW',
+  IN_CART = 'IN_CART',
+  PENDING_PAYMENT = 'PENDING_PAYMENT',
+  PENDING_PAYMENT_VERIFICATION = 'PENDING_PAYMENT_VERIFICATION',
+  ADMIN_QUEUE = 'ADMIN_QUEUE',
+  IN_PROGRESS = 'IN_PROGRESS',
+  PENDING_ADMIN_REVIEW = 'PENDING_ADMIN_REVIEW',
+  COMPLETED = 'COMPLETED',
+  REJECTED = 'REJECTED',
+  CANCELLED = 'CANCELLED',
+}
+
+export interface VerificationItem {
+  id: string;
+  subjectId: string;
+  verificationType: VerificationType;
+  status: VerificationStatus;
+  createdAt: string;
+  updatedAt: string;
+}

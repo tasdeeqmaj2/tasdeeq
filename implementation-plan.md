@@ -6,16 +6,16 @@
 
 **Goal:** One `docker compose up` runs the entire project. All apps scaffold and connect.
 
-- [ ] Initialize Turborepo monorepo with Bun workspaces
-- [ ] Scaffold all 5 apps: `web-admin`, `web-corporate`, `web-employee`, `mobile-consumer`, `mobile-agent`
-- [ ] Scaffold shared packages: `shared-types`, `api-client`, `ui-web`, `ui-mobile`, `verification`
-- [ ] Set up NestJS backend (`apps/api`) with modular folder structure
-- [ ] Configure Prisma with PostgreSQL + PostGIS (schema setup, migration pipeline, Prisma Client generation)
-- [ ] Write `Dockerfile` for each app and the API
-- [ ] Write root `docker-compose.yml` (API, PostgreSQL+PostGIS, Redis, MinIO)
-- [ ] Configure environment variables and `.env.example` for all apps
-- [ ] Set up ESLint + TypeScript config shared across the monorepo
-- [ ] Set up Tailwind CSS + shadcn/ui in `ui-web` package and wire into `web-admin` and `web-corporate`
+- [x] Initialize Turborepo monorepo with Bun workspaces
+- [x] Scaffold all 5 apps: `web-admin`, `web-corporate`, `web-employee`, `mobile-consumer`, `mobile-agent`
+- [x] Scaffold shared packages: `shared-types`, `api-client`, `ui-web`, `ui-mobile`, `verification`
+- [x] Set up NestJS backend (`apps/api`) with modular folder structure
+- [x] Configure Prisma with PostgreSQL + PostGIS (schema setup, migration pipeline, Prisma Client generation)
+- [x] Write `Dockerfile` for each app and the API
+- [x] Write root `docker-compose.yml` (API, PostgreSQL+PostGIS, Redis, MinIO)
+- [x] Configure environment variables and `.env.example` for all apps
+- [x] Set up ESLint + TypeScript config shared across the monorepo
+- [x] Set up Tailwind CSS + shadcn/ui in `ui-web` package and wire into `web-admin` and `web-corporate`
 
 ---
 
