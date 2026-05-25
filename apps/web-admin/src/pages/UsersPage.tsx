@@ -1,6 +1,39 @@
-import { useEffect, useState, FormEvent } from 'react';
-import { useSession } from '../lib/auth-client';
-import AdminLayout from '../components/AdminLayout';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Loader2, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { useSession } from '@/lib/auth-client';
+import AdminLayout from '@/components/AdminLayout';
+import { PageHeader } from '@/components/PageHeader';
+import { RoleBadge } from '@/components/RoleBadge';
+import { StatusBadge } from '@/components/StatusBadge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card } from '@/components/ui/card';
 
 interface User {
   id: string;
@@ -20,19 +53,13 @@ const ROLE_OPTIONS = [
   { value: 'super_admin', label: 'Super Admin' },
 ];
 
-const ROLE_BADGE: Record<string, string> = {
-  super_admin: 'bg-purple-100 text-purple-700',
-  admin: 'bg-blue-100 text-blue-700',
-  user: 'bg-slate-100 text-slate-600',
-};
-
 export default function UsersPage() {
   const { data: session } = useSession();
   const callerRole = session?.user?.role as string | undefined;
 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -51,6 +78,11 @@ export default function UsersPage() {
 
   useEffect(() => { fetchUsers(); }, []);
 
+  function resetForm() {
+    setName(''); setEmail(''); setPassword(''); setPhone(''); setRole('user');
+    setFormError('');
+  }
+
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
     setFormError('');
@@ -67,184 +99,203 @@ export default function UsersPage() {
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setFormError(body.message ?? 'Failed to create user');
+      setFormError((body as { message?: string }).message ?? 'Failed to create user');
       return;
     }
 
-    setShowForm(false);
-    setName(''); setEmail(''); setPassword(''); setPhone(''); setRole('user');
+    setOpen(false);
+    resetForm();
     fetchUsers();
   }
 
   async function handleDelete(id: string, userName: string) {
-    if (!confirm(`Delete user "${userName}"? This cannot be undone.`)) return;
-
+    if (!confirm(`Delete "${userName}"? This cannot be undone.`)) return;
     const res = await fetch(`/api/v1/users/${id}`, {
       method: 'DELETE',
       credentials: 'include',
     });
-
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      alert(body.message ?? 'Failed to delete user');
+      alert((body as { message?: string }).message ?? 'Failed to delete user');
       return;
     }
-
     fetchUsers();
   }
 
-  // Roles available when creating a user, filtered by caller's permissions
-  const availableRoles = callerRole === 'super_admin'
-    ? ROLE_OPTIONS
-    : ROLE_OPTIONS.filter((r) => r.value === 'user');
+  const availableRoles =
+    callerRole === 'super_admin'
+      ? ROLE_OPTIONS
+      : ROLE_OPTIONS.filter((r) => r.value === 'user');
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-900">Users</h2>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-          >
-            {showForm ? 'Cancel' : 'New user'}
-          </button>
-        </div>
+        <PageHeader
+          title="Users"
+          description="Manage Tasdeeq team members"
+          action={
+            <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="mr-1.5 h-4 w-4" />
+                New user
+              </Button>
+            </DialogTrigger>
 
-        {/* Create user form */}
-        {showForm && (
-          <form
-            onSubmit={handleCreate}
-            className="bg-white rounded-xl border border-slate-200 p-6 space-y-4"
-          >
-            <h3 className="text-sm font-semibold text-slate-900">Create user</h3>
+            <DialogContent className="sm:max-w-md">
+              <form onSubmit={handleCreate}>
+                <DialogHeader>
+                  <DialogTitle>Create user</DialogTitle>
+                  <DialogDescription>
+                    Add a new member to the Tasdeeq admin team.
+                  </DialogDescription>
+                </DialogHeader>
 
-            {formError && (
-              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                {formError}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-slate-700">Name</label>
-                <input
-                  required value={name} onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Full name"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-slate-700">Email</label>
-                <input
-                  type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="user@example.com"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-slate-700">Password</label>
-                <input
-                  type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Min 8 characters"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-slate-700">Phone <span className="text-slate-400">(optional)</span></label>
-                <input
-                  type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="+92 300 0000000"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-slate-700">Role</label>
-                <select
-                  value={role} onChange={(e) => setRole(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {availableRoles.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                type="submit" disabled={submitting}
-                className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                {submitting ? 'Creating...' : 'Create user'}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Users table */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center text-sm text-slate-500">Loading...</div>
-          ) : users.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-500">No users yet.</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="text-left px-5 py-3 font-medium text-slate-500">Name</th>
-                  <th className="text-left px-5 py-3 font-medium text-slate-500">Email</th>
-                  <th className="text-left px-5 py-3 font-medium text-slate-500">Role</th>
-                  <th className="text-left px-5 py-3 font-medium text-slate-500">Status</th>
-                  {callerRole === 'super_admin' && (
-                    <th className="px-5 py-3" />
+                <div className="space-y-4 py-4">
+                  {formError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{formError}</AlertDescription>
+                    </Alert>
                   )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-5 py-3 font-medium text-slate-900">
-                      {u.name}
-                      {u.isSuperAdmin && (
-                        <span className="ml-2 text-xs text-purple-600">(you)</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-slate-600">{u.email}</td>
-                    <td className="px-5 py-3">
-                      <span
-                        className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${ROLE_BADGE[u.role] ?? 'bg-slate-100 text-slate-600'}`}
-                      >
-                        {u.role.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      {u.banned ? (
-                        <span className="text-xs text-red-600">Banned</span>
-                      ) : u.isActive ? (
-                        <span className="text-xs text-green-600">Active</span>
-                      ) : (
-                        <span className="text-xs text-slate-400">Inactive</span>
-                      )}
-                    </td>
-                    {callerRole === 'super_admin' && (
-                      <td className="px-5 py-3 text-right">
-                        {!u.isSuperAdmin && (
-                          <button
-                            onClick={() => handleDelete(u.id, u.name)}
-                            className="text-xs text-red-500 hover:text-red-700 transition-colors"
-                          >
-                            Delete
-                          </button>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="c-name">Full name</Label>
+                      <Input
+                        id="c-name"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Jane Doe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="c-phone">Phone <span className="text-muted-foreground">(optional)</span></Label>
+                      <Input
+                        id="c-phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+92 300 0000000"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="c-email">Email</Label>
+                    <Input
+                      id="c-email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="jane@tasdeeq.com"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="c-password">Password</Label>
+                    <Input
+                      id="c-password"
+                      type="password"
+                      required
+                      minLength={8}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Min 8 characters"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="c-role">Role</Label>
+                    <Select value={role} onValueChange={setRole}>
+                      <SelectTrigger id="c-role">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableRoles.map((r) => (
+                          <SelectItem key={r.value} value={r.value}>
+                            {r.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button type="submit" disabled={submitting}>
+                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {submitting ? 'Creating…' : 'Create user'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+          }
+        />
+
+        <Card>
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  {callerRole === 'super_admin' && <TableHead className="w-10" />}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-12">
+                      No users yet.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  users.map((u) => (
+                    <TableRow key={u.id}>
+                      <TableCell className="font-medium">
+                        {u.name}
+                        {u.isSuperAdmin && (
+                          <span className="ml-2 text-xs text-muted-foreground">(you)</span>
                         )}
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                      <TableCell>
+                        <RoleBadge role={u.role} />
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge banned={u.banned} isActive={u.isActive} />
+                      </TableCell>
+                      {callerRole === 'super_admin' && (
+                        <TableCell>
+                          {!u.isSuperAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDelete(u.id, u.name)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           )}
-        </div>
+        </Card>
       </div>
     </AdminLayout>
   );

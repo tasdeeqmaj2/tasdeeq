@@ -96,3 +96,52 @@ Use **context7** (`mcp__context7__resolve-library-id` + `mcp__context7__query-do
 - Any other third-party package added to the workspace
 
 Do **not** use context7 for: business logic, refactoring, code review, or general TypeScript/JavaScript concepts.
+
+## Web Admin UI
+
+`apps/web-admin` uses **shadcn/ui** (slate color scheme, CSS variables) on top of Tailwind CSS.
+
+### Adding components
+
+```bash
+cd apps/web-admin && bunx shadcn@latest add <component-name>
+```
+
+Components land in `src/components/ui/`. Never hand-write shadcn primitives — always use the CLI.
+
+### Path alias
+
+`@/` resolves to `src/` (configured in both `tsconfig.app.json` `paths` and `vite.config.ts` `resolve.alias`).
+
+```ts
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/PageHeader';
+```
+
+### Component organization
+
+| Location | Contents |
+|---|---|
+| `src/components/ui/` | shadcn primitives — do not edit these directly |
+| `src/components/` | App-level shared components extracted from pages |
+| `src/pages/` | Route-level page components |
+
+**When to extract**: if the same pattern appears in 2+ pages, extract it to `src/components/`.
+
+### Shared components
+
+| Component | Purpose |
+|---|---|
+| `PageHeader` | Page title + optional description + optional right-side action slot |
+| `RoleBadge` | Renders role string as a `Badge` (super_admin=default, admin=secondary, user=outline) |
+| `StatusBadge` | Renders active/banned/inactive state as a `Badge` |
+| `AdminLayout` | Sidebar shell wrapping all authenticated pages |
+
+### TypeScript note
+
+`tsconfig.app.json` sets `verbatimModuleSyntax: true`. Always use type-only imports for types:
+
+```ts
+import { type ReactNode } from 'react';
+import { type FormEvent } from 'react';
+```
