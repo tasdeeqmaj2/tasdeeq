@@ -8,9 +8,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // better-auth routes live at /api/auth/*.
-  // toNodeHandler checks req.body when the stream has already been parsed
-  // by NestJS's built-in body parser, so middleware order is fine here.
-  app.use(toNodeHandler(auth));
+  // Scope the handler to that prefix — toNodeHandler is not an Express
+  // middleware and will swallow non-auth requests with a 404 if applied
+  // globally.
+  const authHandler = toNodeHandler(auth);
+  app.use((req: any, res: any, next: () => void) => {
+    if ((req.url as string)?.startsWith('/api/auth')) {
+      return authHandler(req, res);
+    }
+    next();
+  });
 
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
