@@ -6,6 +6,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
+import { UserRole } from '../users.service';
 
 export class CreateUserDto {
   @IsString()
@@ -25,6 +26,6 @@ export class CreateUserDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['user', 'admin', 'super_admin'])
+  @IsIn([UserRole.USER, UserRole.ADMIN])
   role?: string;
 }

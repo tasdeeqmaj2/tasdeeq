@@ -9,7 +9,13 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 
-const PRIVILEGED_ROLES = ['admin', 'super_admin'];
+export const UserRole = {
+  SUPER_ADMIN: 'super_admin',
+  ADMIN: 'admin',
+  USER: 'user',
+} as const;
+
+const PRIVILEGED_ROLES: string[] = [UserRole.ADMIN, UserRole.SUPER_ADMIN];
 
 @Injectable()
 export class UsersService {
@@ -33,13 +39,16 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto, callerRole: string) {
-    const targetRole = dto.role ?? 'user';
+    const targetRole = dto.role ?? UserRole.USER;
 
-    // Normal admins cannot create privileged accounts
-    if (callerRole === 'admin' && PRIVILEGED_ROLES.includes(targetRole)) {
-      throw new ForbiddenException(
-        'Admins can only create regular user accounts',
-      );
+    // super_admin is exclusively created by the seed — never via this API
+    if (targetRole === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Super admin accounts cannot be created through this API');
+    }
+
+    // Normal admins cannot create other admin accounts
+    if (callerRole === UserRole.ADMIN && PRIVILEGED_ROLES.includes(targetRole)) {
+      throw new ForbiddenException('Admins can only create regular user accounts');
     }
 
     const existing = await this.prisma.user.findUnique({
