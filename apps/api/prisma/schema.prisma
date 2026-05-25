@@ -9,14 +9,6 @@ datasource db {
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
-enum Role {
-  TASDEEQ_ADMIN
-  TASDEEQ_FINANCE
-  CORPORATE_USER
-  CONSUMER
-  FIELD_AGENT
-}
-
 enum VerificationType {
   CRIMINAL
   EMPLOYMENT
@@ -59,18 +51,28 @@ enum FieldAgentStatus {
   SUSPENDED
 }
 
-// ─── Core Models ─────────────────────────────────────────────────────────────
+// ─── Core User Models (better-auth compatible) ───────────────────────────────
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  phone     String?  @unique
-  password  String?
-  role      Role
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  phone         String?   @unique
+  // better-auth admin plugin fields
+  role          String    @default("user")
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  // Tasdeeq-specific fields
+  isSuperAdmin  Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
+  sessions          Session[]
+  accounts          Account[]
   corporateProfile  CorporateUser?
   consumerProfile   Consumer?
   fieldAgentProfile FieldAgent?
@@ -79,27 +81,77 @@ model User {
   @@map("users")
 }
 
+// ─── Better-auth Session / Account / Verification ────────────────────────────
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("accounts")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verifications")
+}
+
+// ─── Domain Profile Models ────────────────────────────────────────────────────
+
 model CorporateUser {
   id        String  @id @default(cuid())
   userId    String  @unique
   companyId String
   isAdmin   Boolean @default(false)
 
-  user    User      @relation(fields: [userId], references: [id])
-  company Company   @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
 
   @@map("corporate_users")
 }
 
 model Company {
-  id                String   @id @default(cuid())
-  name              String
-  registrationNo    String?
-  address           String?
-  isEducationInstitute Boolean @default(false)
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  name                 String
+  registrationNo       String?
+  address              String?
+  isEducationInstitute Boolean  @default(false)
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   users             CorporateUser[]
   verificationItems VerificationItem[]
@@ -108,8 +160,8 @@ model Company {
 }
 
 model Consumer {
-  id     String @id @default(cuid())
-  userId String @unique
+  id     String  @id @default(cuid())
+  userId String  @unique
   cnic   String?
 
   user              User               @relation(fields: [userId], references: [id])
@@ -127,7 +179,7 @@ model FieldAgent {
   status    FieldAgentStatus @default(PENDING_APPROVAL)
   createdAt DateTime         @default(now())
 
-  user  User   @relation(fields: [userId], references: [id])
+  user  User               @relation(fields: [userId], references: [id])
   tasks VerificationItem[]
 
   @@map("field_agents")
@@ -163,11 +215,11 @@ model VerificationItem {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
-  subject        Subject       @relation(fields: [subjectId], references: [id])
-  company        Company?      @relation(fields: [companyId], references: [id])
-  consumer       Consumer?     @relation(fields: [consumerId], references: [id])
-  fieldAgent     FieldAgent?   @relation(fields: [fieldAgentId], references: [id])
-  invoice        Invoice?      @relation(fields: [invoiceId], references: [id])
+  subject        Subject         @relation(fields: [subjectId], references: [id])
+  company        Company?        @relation(fields: [companyId], references: [id])
+  consumer       Consumer?       @relation(fields: [consumerId], references: [id])
+  fieldAgent     FieldAgent?     @relation(fields: [fieldAgentId], references: [id])
+  invoice        Invoice?        @relation(fields: [invoiceId], references: [id])
   documents      Document[]
   statusHistory  StatusHistory[]
   employmentData EmploymentData?
@@ -193,16 +245,16 @@ model StatusHistory {
 // ─── Verification Data Models ─────────────────────────────────────────────────
 
 model EmploymentData {
-  id                 String  @id @default(cuid())
-  verificationItemId String  @unique
-  employerName       String?
-  employerContact    String?
-  jobTitle           String?
-  startDate          DateTime?
-  endDate            DateTime?
-  reasonForLeaving   String?
-  remarks            String?
-  submittedByEmployee Boolean @default(false)
+  id                  String    @id @default(cuid())
+  verificationItemId  String    @unique
+  employerName        String?
+  employerContact     String?
+  jobTitle            String?
+  startDate           DateTime?
+  endDate             DateTime?
+  reasonForLeaving    String?
+  remarks             String?
+  submittedByEmployee Boolean   @default(false)
 
   verificationItem VerificationItem @relation(fields: [verificationItemId], references: [id])
 
@@ -210,16 +262,16 @@ model EmploymentData {
 }
 
 model EducationData {
-  id                 String    @id @default(cuid())
-  verificationItemId String    @unique
-  instituteName      String?
-  degree             String?
-  fieldOfStudy       String?
-  startDate          DateTime?
-  endDate            DateTime?
-  result             String?
-  remarks            String?
-  submittedByEmployee Boolean  @default(false)
+  id                  String    @id @default(cuid())
+  verificationItemId  String    @unique
+  instituteName       String?
+  degree              String?
+  fieldOfStudy        String?
+  startDate           DateTime?
+  endDate             DateTime?
+  result              String?
+  remarks             String?
+  submittedByEmployee Boolean   @default(false)
 
   verificationItem VerificationItem @relation(fields: [verificationItemId], references: [id])
 
@@ -227,8 +279,8 @@ model EducationData {
 }
 
 model AddressData {
-  id                 String  @id @default(cuid())
-  verificationItemId String  @unique
+  id                 String    @id @default(cuid())
+  verificationItemId String    @unique
   address            String?
   city               String?
   agentRemarks       String?
@@ -244,13 +296,13 @@ model AddressData {
 // ─── Payment Models ───────────────────────────────────────────────────────────
 
 model Invoice {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   totalAmount   Decimal
   paymentMethod PaymentMethod?
-  paymentStatus PaymentStatus @default(PENDING)
+  paymentStatus PaymentStatus  @default(PENDING)
   paidAt        DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   items    VerificationItem[]
   payments Payment[]
@@ -259,15 +311,15 @@ model Invoice {
 }
 
 model Payment {
-  id              String        @id @default(cuid())
-  invoiceId       String
-  amount          Decimal
-  method          PaymentMethod
-  status          PaymentStatus @default(PENDING)
-  transactionRef  String?
-  verifiedById    String?
-  verifiedAt      DateTime?
-  createdAt       DateTime      @default(now())
+  id             String        @id @default(cuid())
+  invoiceId      String
+  amount         Decimal
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  transactionRef String?
+  verifiedById   String?
+  verifiedAt     DateTime?
+  createdAt      DateTime      @default(now())
 
   invoice Invoice @relation(fields: [invoiceId], references: [id])
 

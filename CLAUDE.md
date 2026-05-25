@@ -81,3 +81,18 @@ Prisma schema is at `apps/api/prisma/schema.prisma`. PostGIS spatial queries (ge
 | MinIO (S3-compatible) | 9000 (API), 9001 (console) |
 
 Copy `.env.example` to `.env` before running locally.
+
+## Documentation
+
+Use **context7** (`mcp__context7__resolve-library-id` + `mcp__context7__query-docs`) to fetch current documentation before writing code that uses any library, framework, or API in this project. Always prefer context7 over training-data recall for:
+
+- NestJS (modules, guards, interceptors, decorators, pipes)
+- Prisma (schema syntax, client API, migrations, raw queries)
+- Expo / React Native (navigation, permissions, native modules)
+- Next.js / React (app router, server components, hooks)
+- Turborepo (pipeline config, caching, remote caching)
+- Bun (runtime APIs, workspace commands)
+- MinIO / S3 SDK (bucket ops, presigned URLs)
+- Any other third-party package added to the workspace
+
+Do **not** use context7 for: business logic, refactoring, code review, or general TypeScript/JavaScript concepts.

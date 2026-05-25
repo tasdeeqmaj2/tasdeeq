@@ -13,6 +13,7 @@
     "@tasdeeq/api-client": "*",
     "@tasdeeq/shared-types": "*",
     "@tasdeeq/ui-web": "*",
+    "better-auth": "^1.6.11",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.0.0"
